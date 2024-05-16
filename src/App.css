@@ -32,7 +32,92 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
+}
+
+.leaflet-popup {
+  width: 350px;
+}
+
+.leaflet-popup:has(.leaflet-popup-content-wrapper>.leaflet-popup-content>ul) {
+  width: 100px;
+}
+
+.leaflet-popup-tip-container {
+  display: none;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 0 !important;
+  border: 1px solid black;
+  padding: 0 !important;
+  width: fit-content;
+}
+
+.leaflet-popup-content {
+  width: 320px !important;
+  margin: auto !important;
+}
+
+.leaflet-popup-content:has(>ul) {
+  width: 99px !important;
+  margin: auto !important;
+}
+
+.leaflet-popup-content ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.leaflet-popup-content ul li {
+  padding: 5px 10px;
+  border-bottom: 1px solid black;
+  cursor: pointer;
+}
+
+.leaflet-popup-content ul li:hover {
+  background-color: rgb(223, 223, 223);
+}
+
+.leaflet-popup-content ul li:last-child {
+  border-bottom: none;
+}
+
+.leaflet-marker-icon {
+  border: none !important;
+  background: none !important;
+}
+
+.leaflet-marker-icon:has(div>span) {
+  background-color: white !important;
+  border-radius: 50%;
+}
+
+.leaflet-marker-icon>div>span {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.marker-cluster-small div {
+  background-color: rgba(244, 176, 129, 255) !important;
+}
+
+.custom-camera-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #000;
+  border-radius: 50%;
+  background-color: white;
+  color: black;
+}
+
+.custom-camera-icon i {
+  font-size: 24px;
 }
