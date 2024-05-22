@@ -8,7 +8,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 
 import "leaflet.markercluster";
 import PopupContent from "./VideoPlay";
-import { createRoot } from "react-dom/client";
+import { Root, createRoot } from "react-dom/client";
 
 // Create a custom icon using a div with a Bootstrap Icon class
 const cameraIcon = () => {
@@ -18,6 +18,17 @@ const cameraIcon = () => {
     iconAnchor: [16, 32],
     popupAnchor: [200, 200],
   });
+};
+
+const rootMap = new WeakMap<HTMLElement, Root>();
+
+const getOrCreateRoot = (container: HTMLElement): Root => {
+  if (!rootMap.has(container)) {
+    const root = createRoot(container);
+    rootMap.set(container, root);
+    return root;
+  }
+  return rootMap.get(container)!;
 };
 
 // A component to handle adding markers to the map and clustering them
@@ -109,14 +120,15 @@ const MarkerCluster = ({
                 ),
               })
                 .setLatLng(clusterPopup.getLatLng()!)
-                .setContent('<div id="camera-popup"></div>');
+                .setContent(`<div id="camera-popup"></div>`);
               map.addLayer(cameraPopup);
 
               popupLayersRef.current.push(cameraPopup);
 
               const popupContainer = document.getElementById(`camera-popup`);
               if (popupContainer) {
-                const root = createRoot(popupContainer);
+                const root = getOrCreateRoot(popupContainer);
+                // const root = createRoot(popupContainer);
                 root.render(
                   <PopupContent name={cam.name} streamUrl={cam.streamUrl} />
                 );
