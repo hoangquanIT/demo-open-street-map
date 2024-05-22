@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -8,9 +8,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 
 import "leaflet.markercluster";
 import PopupContent from "./VideoPlay";
-import ReactDOM from "react-dom";
 import { createRoot } from "react-dom/client";
-import ClusterPopup from "./ClusterPopup";
 
 // Create a custom icon using a div with a Bootstrap Icon class
 const cameraIcon = () => {
@@ -35,8 +33,7 @@ const MarkerCluster = ({
   }[];
 }) => {
   const map = useMap();
-  const [clusterCameras, setClusterCameras] = useState<any[]>([]);
-  const markersRef = useRef<any>(null);
+  const popupLayersRef = useRef<any[]>([]);
 
   useEffect(() => {
     const markers = L.markerClusterGroup({
@@ -66,75 +63,76 @@ const MarkerCluster = ({
           );
         }
       });
+    });
 
-      markers.on("clusterclick", (cluster) => {
-        const camerasInCluster: any[] = [];
-        cluster.layer.getAllChildMarkers().forEach((marker: any) => {
-          const camera = cameraData.find(
-            (cam) =>
-              cam.lat === marker.getLatLng().lat &&
-              cam.lng === marker.getLatLng().lng
-          );
-          if (camera) {
-            camerasInCluster.push(camera);
-          }
-        });
-
-        // const listItems = camerasInCluster
-        //   .map((cam) => `<li id="cam-${cam.id}">${cam.name}</li>`)
-        //   .join("");
-        // const popupContent = `<ul>${listItems}</ul>`;
-
-        setClusterCameras(camerasInCluster);
-
-        L.popup({
-          closeButton: false,
-          offset: L.point(70, 45),
-        })
-          .setLatLng(cluster.layer.getLatLng())
-          // .setContent(popupContent)
-          .setContent('<div id="cluster-popup"></div>')
-          .openOn(map);
-
-        console.log("popup");
-
-        // setTimeout(() => {
-        //   camerasInCluster.forEach((cam) => {
-        //     const cameraElement = document.getElementById(`cam-${cam.id}`)!;
-        //     cameraElement.onclick = () => {
-        //       console.log(cam.name, " clicked");
-
-        //       const marker = markers
-        //         .getLayers()
-        //         .find(
-        //           (m) =>
-        //             m instanceof L.Marker &&
-        //             m.getLatLng().lat === cam.lat &&
-        //             m.getLatLng().lng === cam.lng
-        //         );
-        //       if (marker) {
-        //         marker.openPopup();
-        //         const popupContainer = document.getElementById(
-        //           `popup-${cam.id}`
-        //         );
-        //         if (popupContainer) {
-        //           ReactDOM.render(
-        //             <PopupContent name={cam.name} streamUrl={cam.streamUrl} />,
-        //             popupContainer
-        //           );
-        //         }
-        //       }
-        //     };
-        //   });
-        // }, 100);
+    markers.on("clusterclick", (cluster) => {
+      const camerasInCluster: any[] = [];
+      cluster.layer.getAllChildMarkers().forEach((marker: any) => {
+        const camera = cameraData.find(
+          (cam) =>
+            cam.lat === marker.getLatLng().lat &&
+            cam.lng === marker.getLatLng().lng
+        );
+        if (camera) {
+          camerasInCluster.push(camera);
+        }
       });
+
+      const listItems = camerasInCluster
+        .map((cam) => `<li id="cam-${cam.id}">${cam.name}</li>`)
+        .join("");
+      const popupContent = `<ul>${listItems}</ul>`;
+
+      const clusterPopup: L.Popup = L.popup({ closeButton: false })
+        .setLatLng(cluster.layer.getLatLng())
+        .setContent(popupContent);
+      map.addLayer(clusterPopup);
+
+      popupLayersRef.current.push(clusterPopup);
+
+      const clusterPopupElement = clusterPopup.getElement();
+      if (clusterPopupElement) {
+        const height = clusterPopupElement.offsetHeight;
+        clusterPopup.options.offset = L.point(70, height / 2); // Center vertically
+        clusterPopup.update();
+      }
+
+      setTimeout(() => {
+        camerasInCluster.forEach((cam) => {
+          const cameraElement = document.getElementById(`cam-${cam.id}`)!;
+          cameraElement.onclick = () => {
+            if (clusterPopupElement) {
+              const cameraPopup = L.popup({
+                offset: L.point(
+                  290,
+                  240 - clusterPopupElement.offsetHeight / 2
+                ),
+              })
+                .setLatLng(clusterPopup.getLatLng()!)
+                .setContent('<div id="camera-popup"></div>');
+              map.addLayer(cameraPopup);
+
+              popupLayersRef.current.push(cameraPopup);
+
+              const popupContainer = document.getElementById(`camera-popup`);
+              if (popupContainer) {
+                const root = createRoot(popupContainer);
+                root.render(
+                  <PopupContent name={cam.name} streamUrl={cam.streamUrl} />
+                );
+              }
+            }
+          };
+        });
+      }, 100);
     });
 
     map.addLayer(markers);
-    markersRef.current = markers;
 
     map.on("zoomstart", () => {
       map.closePopup();
+      popupLayersRef.current.forEach((layer: any) => map.removeLayer(layer));
+      popupLayersRef.current = [];
     });
 
     return () => {
@@ -142,72 +140,6 @@ const MarkerCluster = ({
       map.off("zoomstart");
     };
   }, [cameraData, map]);
-
-  useEffect(() => {
-    if (clusterCameras.length > 0) {
-      const popupContainer = document.getElementById("cluster-popup");
-      console.log(popupContainer);
-      if (popupContainer) {
-        const root = createRoot(popupContainer);
-        root.render(
-          <ClusterPopup
-            cameras={clusterCameras}
-            onCameraClick={(cam) => {
-              const marker = markersRef.current
-                .getLayers()
-                .find(
-                  (m: any) =>
-                    m instanceof L.Marker &&
-                    m.getLatLng().lat === cam.lat &&
-                    m.getLatLng().lng === cam.lng
-                );
-              if (marker) {
-                map.setView(marker.getLatLng(), map.getZoom());
-                marker.openPopup();
-                const popupContainer = document.getElementById(
-                  `popup-${cam.id}`
-                );
-                if (popupContainer) {
-                  const root = createRoot(popupContainer);
-                  root.render(
-                    <PopupContent name={cam.name} streamUrl={cam.streamUrl} />
-                  );
-                }
-              }
-            }}
-          />
-        );
-      }
-
-      //   clusterCameras.forEach((cam) => {
-      //     const cameraElement = document.getElementById(`cam-${cam.id}`)!;
-      //     console.log(cameraElement);
-      //     cameraElement.addEventListener("click", () => {
-      //       console.log(cam.name, " clicked");
-
-      //       const marker = markersRef.current
-      //         .getLayers()
-      //         .find(
-      //           (m: any) =>
-      //             m instanceof L.Marker &&
-      //             m.getLatLng().lat === cam.lat &&
-      //             m.getLatLng().lng === cam.lng
-      //         );
-      //       if (marker) {
-      //         map.setView(marker.getLatLng(), map.getZoom());
-      //         marker.openPopup();
-      //         const popupContainer = document.getElementById(`popup-${cam.id}`);
-      //         if (popupContainer) {
-      //           ReactDOM.render(
-      //             <PopupContent name={cam.name} streamUrl={cam.streamUrl} />,
-      //             popupContainer
-      //           );
-      //         }
-      //       }
-      //     });
-      //   });
-    }
-  }, [clusterCameras, map]);
 
   return null;
 };
